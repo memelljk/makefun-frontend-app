@@ -27,6 +27,29 @@ let navStamp = 0;
 
 const shotReady = (on) => { window.__shotReady = on; };
 
+// Countdowns age while a page sits open: every thirty seconds the
+// ticker rewrites the text of each [data-until] element in place, so
+// "2h 9m left" never goes stale on a board left in a tab. The ticker
+// belongs to the current route only; dispatch stops it.
+const TICK_MS = 30000;
+let ticker = null;
+
+function refreshCountdowns() {
+  for (const el of root.querySelectorAll('[data-until]')) {
+    if (el.dataset.until) el.textContent = left(el.dataset.until);
+  }
+}
+
+function startTicker() {
+  stopTicker();
+  ticker = setInterval(refreshCountdowns, TICK_MS);
+}
+
+function stopTicker() {
+  if (ticker !== null) clearInterval(ticker);
+  ticker = null;
+}
+
 function fail(message) {
   root.innerHTML = `<h1>Something went wrong</h1>
     <p class="oops" role="alert">${esc(message)}</p>
@@ -152,11 +175,19 @@ async function boardRoute(stamp) {
   document.getElementById('sort').addEventListener('change', (event) => { prefs.sort = event.target.value; paintCards(); });
   document.getElementById('open-only').addEventListener('change', (event) => { prefs.open = event.target.checked; paintCards(); paintHero(); });
 
-  boardData = await fetchBoard();
+  boardData = await fetchBoard((fresh) => {
+    // A revalidation landed with a changed board: repaint in place.
+    if (stamp !== navStamp) return;
+    boardData = fresh;
+    categoryOptions();
+    paintHero();
+    paintCards();
+  });
   if (stamp !== navStamp) return;
   categoryOptions();
   paintHero();
   paintCards();
+  startTicker();
   shotReady(true);
 }
 
@@ -225,9 +256,14 @@ function paintBounty(b) {
 
 async function bountyRoute(stamp, slug) {
   root.innerHTML = '<p class="hint">Fetching this bounty…</p>';
-  const b = await fetchBounty(slug);
+  const b = await fetchBounty(slug, (fresh) => {
+    if (stamp !== navStamp) return;
+    paintBounty(fresh);
+    startTicker();
+  });
   if (stamp !== navStamp) return;
   paintBounty(b);
+  startTicker();
   shotReady(true);
 }
 
@@ -235,6 +271,7 @@ async function bountyRoute(stamp, slug) {
 
 async function dispatch() {
   const stamp = ++navStamp;
+  stopTicker();
   shotReady(false);
   const path = location.hash.replace(/^#/, '') || '/';
   if (path === '/') boardLink.setAttribute('aria-current', 'page');
