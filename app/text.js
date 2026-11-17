@@ -59,13 +59,14 @@ export function accepting(b, now = Date.now()) {
 }
 
 // Leaderboard scores are micro-units: 956066 is a 95.6066% win rate.
+// A missing or non-numeric score shows the dash, never "NaN%".
 export function rate(micro) {
-  if (micro === null || micro === undefined) return DASH;
+  if (micro === null || micro === undefined || !Number.isFinite(micro)) return DASH;
   return `${(micro / 10000).toFixed(2)}%`;
 }
 
 export function sizeOf(bytes) {
-  if (bytes === null || bytes === undefined) return DASH;
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) return DASH;
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1048576).toFixed(2)} MB`;

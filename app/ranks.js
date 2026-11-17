@@ -53,7 +53,9 @@ function paintRows(root) {
   if (!body) return;
   const list = visibleRows();
   const limit = filterText ? list.length : shown;
-  body.innerHTML = list.slice(0, limit).map(rowFor).join('');
+  body.innerHTML = list.length
+    ? list.slice(0, limit).map(rowFor).join('')
+    : '<tr><td colspan="7" class="empty">No entries match that filter.</td></tr>';
   const meta = root.querySelector('#rows-meta');
   if (meta) {
     meta.textContent = filterText

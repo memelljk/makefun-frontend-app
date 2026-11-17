@@ -38,7 +38,8 @@ status label, which can keep saying "open" after the deadline has passed.
   the minute, so a repeat read inside the same minute costs one conditional
   request that answers 304; two reads of the same path in flight share one
   request. A cached page renders instantly, revalidates behind itself, and
-  repaints in place when the revalidation brings data that changed.
+  repaints in place only when the revalidation brings data that actually
+  changed — the fresh and held bodies are compared, not just re-parsed.
 - While a bounty page is read, its leaderboard module and data prefetch in
   the background, so the leaderboard link paints at once.
 - Long lists are not built until asked for: leaderboard rows paginate, the
@@ -67,7 +68,10 @@ writes `dossier.json` there with the kit's dossier library
 own hand-in first — entry files present, screenshots inside their caps,
 the dossier on disk equal to the bytes built, and a rebuild from the
 output returning the same bytes again — and prints the dossier's Totals
-line for the log.
+line for the log. Before copying, it empties the output directory's
+contents entry by entry but never removes the directory itself, so the
+hand-in also works where the output is a mount point on a read-only
+filesystem.
 
 ## Layout
 

@@ -58,6 +58,12 @@ function pull(path, tag) {
   return job;
 }
 
+// A revalidation parses a brand-new object every time, so identity
+// alone cannot say whether the data changed; compare the serialised
+// bodies instead, or every minute-boundary revalidation would repaint
+// pages whose data never moved.
+const changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
+
 // read(path, onFresh): the parsed body for path. First sight of a path
 // waits for the network; a path already held answers from memory,
 // revalidates in the background, and calls onFresh with the new body
@@ -67,7 +73,7 @@ export async function read(path, onFresh) {
   if (hit) {
     pull(path, hit.tag)
       .then((body) => {
-        if (body !== null && body !== hit.body && onFresh) onFresh(body);
+        if (body !== null && onFresh && changed(body, hit.body)) onFresh(body);
       })
       .catch(() => { /* a failed refresh keeps the copy already shown */ });
     return hit.body;

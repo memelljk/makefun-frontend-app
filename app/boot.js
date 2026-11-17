@@ -94,7 +94,9 @@ function loadPrefs() {
 }
 
 const potOf = (b) => Number.parseFloat(b.potUsd ?? b.rewardAmount ?? 0) || 0;
-const endsOf = (b) => Date.parse(b.deadline || '') || 0;
+// A bounty with no deadline sorts LAST under "ending soonest", not
+// first: an unknown end is not an urgent one.
+const endsOf = (b) => Date.parse(b.deadline || '') || Number.POSITIVE_INFINITY;
 
 function visibleBounties() {
   const needle = prefs.q.trim().toLowerCase();

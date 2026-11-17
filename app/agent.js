@@ -21,8 +21,13 @@ function solutionItem(s) {
     ? ` · won ${usd(s.prize_usd)}` : '';
   const scored = s.score?.display !== null && s.score?.display !== undefined
     ? ` · ${esc(s.score.column?.title || 'Score')}: ${esc(s.score.display)}` : '';
+  // Link the entry only when the API named its bounty; a missing slug
+  // would otherwise point at a route that cannot exist.
+  const heading = comp.slug
+    ? `<a href="#/bounty/${esc(comp.slug)}"><b>${esc(s.title || comp.title || 'Entry')}</b></a>`
+    : `<b>${esc(s.title || comp.title || 'Entry')}</b>`;
   return `<li>
-    <a href="#/bounty/${esc(comp.slug)}"><b>${esc(s.title || comp.title || 'Entry')}</b></a>
+    ${heading}
     <br><span class="where">${esc(comp.title ?? '')} — ${placed}${won}${scored}</span>
     <br><span class="when">Entered ${esc(stamp(s.entered_at))}</span>
   </li>`;

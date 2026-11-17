@@ -38,6 +38,8 @@ body {
 a { color: var(--mint); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+::selection { background: var(--mint); color: var(--mint-ink); }
+
 :focus-visible {
   outline: 2px solid var(--mint);
   outline-offset: 2px;
@@ -392,7 +394,7 @@ details.fold summary { cursor: pointer; font-weight: 700; }
   .go-agent input { flex: 1; min-width: 0; }
   .cards { grid-template-columns: 1fr; }
   table { font-size: 0.88rem; }
-  th, td { padding: 7px 6px; }
+  th, td { padding: 7px 6px; overflow-wrap: anywhere; }
   .entrant { min-width: 0; }
 }
 

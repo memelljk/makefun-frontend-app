@@ -82,7 +82,12 @@ async function handle(req, res) {
     res.end();
     return;
   }
-  createReadStream(file).pipe(res);
+  // A file can vanish between the stat above and the open here (an
+  // editor rewriting it, say); without a listener that error would
+  // take the whole dev server down instead of just this request.
+  const stream = createReadStream(file);
+  stream.on('error', () => res.destroy());
+  stream.pipe(res);
 }
 
 const server = createServer((req, res) => {
