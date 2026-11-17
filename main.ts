@@ -99,8 +99,13 @@ function main() {
   if (out === root) fail('the output directory must differ from the repository root');
   console.log(`Handing in ${root} -> ${out}`);
 
-  rmSync(out, { recursive: true, force: true });
+  // Clear the output directory's CONTENTS, never the directory itself:
+  // where the grader runs this, the output is a mount point on a
+  // read-only filesystem, so removing the directory is impossible.
   mkdirSync(out, { recursive: true });
+  for (const name of readdirSync(out)) {
+    rmSync(join(out, name), { recursive: true, force: true });
+  }
   copyTree(join(root, 'app'), join(out, 'app'));
   copyTree(join(root, 'screenshots'), join(out, 'screenshots'));
 
