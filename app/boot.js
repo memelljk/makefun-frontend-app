@@ -16,7 +16,7 @@
 // longer current is dropped, so a slow answer can never paint over a
 // page the reader has already left.
 
-import { board as fetchBoard, bounty as fetchBounty } from './net.js';
+import { board as fetchBoard, bounty as fetchBounty, ranks as fetchRanks } from './net.js';
 import { accepting, esc, left, md, stamp, tally, usd } from './text.js';
 
 const root = document.getElementById('app');
@@ -34,14 +34,21 @@ const shotReady = (on) => { window.__shotReady = on; };
 const TICK_MS = 30000;
 let ticker = null;
 
+const SOON_MS = 2 * 60 * 60 * 1000;
+
 function refreshCountdowns() {
   for (const el of root.querySelectorAll('[data-until]')) {
-    if (el.dataset.until) el.textContent = left(el.dataset.until);
+    if (!el.dataset.until) continue;
+    el.textContent = left(el.dataset.until);
+    // Under two hours to a deadline, the countdown turns amber.
+    const ms = Date.parse(el.dataset.until) - Date.now();
+    el.classList.toggle('soon', ms > 0 && ms < SOON_MS);
   }
 }
 
 function startTicker() {
   stopTicker();
+  refreshCountdowns();
   ticker = setInterval(refreshCountdowns, TICK_MS);
 }
 
@@ -62,6 +69,29 @@ function fail(message) {
 
 const prefs = { q: '', cat: 'all', sort: 'soon', open: true };
 let boardData = null;
+
+// The board remembers how it was left — search, category, order, the
+// open-only switch — in local storage, so a returning reader lands on
+// the view they built. Storage being off or corrupt just means the
+// defaults apply.
+const PREFS_KEY = 'makefun-live-board';
+
+function savePrefs() {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch { /* the board forgets between visits; nothing breaks */ }
+}
+
+function loadPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
+    if (!saved) return;
+    if (typeof saved.q === 'string') prefs.q = saved.q;
+    if (typeof saved.cat === 'string') prefs.cat = saved.cat;
+    if (['soon', 'pot', 'entries', 'fresh'].includes(saved.sort)) prefs.sort = saved.sort;
+    prefs.open = saved.open !== false;
+  } catch { /* defaults stand */ }
+}
 
 const potOf = (b) => Number.parseFloat(b.potUsd ?? b.rewardAmount ?? 0) || 0;
 const endsOf = (b) => Date.parse(b.deadline || '') || 0;
@@ -142,6 +172,7 @@ function categoryOptions() {
 }
 
 async function boardRoute(stamp) {
+  loadPrefs();
   document.title = BASE_TITLE;
   const sortChoices = [
     ['soon', 'Ending soonest'],
@@ -170,10 +201,10 @@ async function boardRoute(stamp) {
 
   const form = document.getElementById('controls');
   form.addEventListener('submit', (event) => event.preventDefault());
-  document.getElementById('q').addEventListener('input', (event) => { prefs.q = event.target.value; paintCards(); });
-  document.getElementById('cat').addEventListener('change', (event) => { prefs.cat = event.target.value; paintCards(); });
-  document.getElementById('sort').addEventListener('change', (event) => { prefs.sort = event.target.value; paintCards(); });
-  document.getElementById('open-only').addEventListener('change', (event) => { prefs.open = event.target.checked; paintCards(); paintHero(); });
+  document.getElementById('q').addEventListener('input', (event) => { prefs.q = event.target.value; savePrefs(); paintCards(); refreshCountdowns(); });
+  document.getElementById('cat').addEventListener('change', (event) => { prefs.cat = event.target.value; savePrefs(); paintCards(); refreshCountdowns(); });
+  document.getElementById('sort').addEventListener('change', (event) => { prefs.sort = event.target.value; savePrefs(); paintCards(); refreshCountdowns(); });
+  document.getElementById('open-only').addEventListener('change', (event) => { prefs.open = event.target.checked; savePrefs(); paintCards(); paintHero(); refreshCountdowns(); });
 
   boardData = await fetchBoard((fresh) => {
     // A revalidation landed with a changed board: repaint in place.
@@ -182,6 +213,7 @@ async function boardRoute(stamp) {
     categoryOptions();
     paintHero();
     paintCards();
+    refreshCountdowns();
   });
   if (stamp !== navStamp) return;
   categoryOptions();
@@ -254,6 +286,17 @@ function paintBounty(b) {
   });
 }
 
+// While a bounty page is being read, warm up its leaderboard in the
+// background — the module and its data — so following the leaderboard
+// link paints at once instead of fetching first.
+function prefetchRanks(slug) {
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+  idle(() => {
+    import('./ranks.js').catch(() => { /* the click will retry */ });
+    fetchRanks(slug).catch(() => { /* the click will retry */ });
+  });
+}
+
 async function bountyRoute(stamp, slug) {
   root.innerHTML = '<p class="hint">Fetching this bounty…</p>';
   const b = await fetchBounty(slug, (fresh) => {
@@ -264,6 +307,7 @@ async function bountyRoute(stamp, slug) {
   if (stamp !== navStamp) return;
   paintBounty(b);
   startTicker();
+  prefetchRanks(slug);
   shotReady(true);
 }
 

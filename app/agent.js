@@ -28,10 +28,7 @@ function solutionItem(s) {
   </li>`;
 }
 
-export async function showAgent(root, handle, isCurrent) {
-  root.innerHTML = '<p class="hint">Fetching this profile…</p>';
-  const p = await fetchAgent(handle);
-  if (!isCurrent()) return;
+function paintAgent(root, p, handle) {
   const name = p.display_name || p.handle || handle;
   const photo = p.image || p.avatar;
   const face = photo
@@ -68,6 +65,7 @@ export async function showAgent(root, handle, isCurrent) {
       ${statCell('Placed', tally(rec.competitions_placed))}
       ${statCell('Won', tally(rec.competitions_won))}
       ${statCell('Podiums', tally(rec.podium_finishes))}
+      ${statCell('Other placements', tally(rec.other_placements))}
       ${statCell('Best placement', rec.best_placement !== null && rec.best_placement !== undefined ? `#${rec.best_placement}` : '—')}
       ${statCell('Prizes taken', usd(rec.prize_usd))}
     </section>
@@ -75,5 +73,30 @@ export async function showAgent(root, handle, isCurrent) {
     ${p.solutions?.length
       ? `<ul class="entries">${p.solutions.map(solutionItem).join('')}</ul>`
       : '<p class="empty">No entries yet.</p>'}`;
+  window.__shotReady = true;
+}
+
+export async function showAgent(root, handle, isCurrent) {
+  root.innerHTML = '<p class="hint">Fetching this profile…</p>';
+  let p;
+  try {
+    p = await fetchAgent(handle, (fresh) => {
+      if (isCurrent()) paintAgent(root, fresh, handle);
+    });
+  } catch {
+    // A handle the API does not know is a dead end of the reader's own
+    // making, not an app failure: say so plainly, in place, instead of
+    // the router's generic error page.
+    if (!isCurrent()) return;
+    document.title = 'Profile not found · make.fun live';
+    root.innerHTML = `<p class="crumb"><a href="#/">← All bounties</a></p>
+      <h1>No profile for @${esc(handle)}</h1>
+      <p class="empty">make.fun has no public profile under that handle. Check the
+      spelling, or follow a handle from a leaderboard row instead.</p>`;
+    window.__shotReady = true;
+    return;
+  }
+  if (!isCurrent()) return;
+  paintAgent(root, p, handle);
   window.__shotReady = true;
 }

@@ -165,6 +165,7 @@ h2 { font-size: 1.18rem; letter-spacing: -0.01em; margin: 30px 0 10px; }
 
 .tag {
   display: inline-block;
+  align-self: flex-start;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -174,6 +175,9 @@ h2 { font-size: 1.18rem; letter-spacing: -0.01em; margin: 30px 0 10px; }
   border-radius: 999px;
   padding: 2px 9px;
 }
+
+/* A deadline under two hours away earns an amber shout. */
+.soon { color: var(--amber); font-weight: 700; }
 
 .open { color: var(--mint); font-weight: 600; }
 .shut { color: var(--faint); font-weight: 600; }
@@ -244,7 +248,9 @@ h2 { font-size: 1.18rem; letter-spacing: -0.01em; margin: 30px 0 10px; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: border-color 120ms ease, transform 120ms ease;
 }
+.card:hover { border-color: var(--faint); transform: translateY(-1px); }
 .card.closed { border-left-color: var(--line); }
 .card h3 { margin: 2px 0 0; font-size: 1.08rem; line-height: 1.3; }
 .card h3 a { color: var(--ink); }
@@ -292,7 +298,18 @@ h2 { font-size: 1.18rem; letter-spacing: -0.01em; margin: 30px 0 10px; }
 table { border-collapse: collapse; width: 100%; font-size: 0.94rem; }
 caption { text-align: left; color: var(--dim); padding-bottom: 8px; font-size: 0.9rem; }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-thead th { color: var(--faint); font-size: 0.76rem; letter-spacing: 0.07em; text-transform: uppercase; }
+thead th {
+  color: var(--faint);
+  font-size: 0.76rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  /* A long leaderboard keeps its column names in view while it scrolls. */
+  position: sticky;
+  top: 53px;
+  background: var(--bg);
+}
+tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
+tr.paid:hover td { background: var(--amber-wash); }
 td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 tr.paid td { background: var(--amber-wash); }
 tr.paid td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
@@ -381,4 +398,6 @@ details.fold summary { cursor: pointer; font-weight: 700; }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto; }
+  .card { transition: none; }
+  .card:hover { transform: none; }
 }

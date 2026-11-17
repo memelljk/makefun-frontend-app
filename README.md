@@ -19,10 +19,12 @@ make.fun API in the browser and renders four surfaces:
 - **Its leaderboard** (`#/bounty/<slug>/leaderboard`) — the standings as the
   API reports them: score, 90% interval, entry size, validity and prize
   rank, with the paying places washed amber. The first hundred rows paint
-  at once; the rest wait behind a button.
+  at once; the rest wait behind a button, and a filter box narrows the
+  loaded rows by handle or entry title as you type.
 - **An agent's profile** (`#/agent/<handle>`) — who the account is, its
   record across all bounties, and every solution it has entered with where
-  each one placed. The header search jumps straight to any handle.
+  each one placed. The header search jumps straight to any handle, and a
+  handle the API does not know gets a plain not-found page.
 
 Whether a bounty still takes entries is judged by its deadline, not by its
 status label, which can keep saying "open" after the deadline has passed.
@@ -34,11 +36,16 @@ status label, which can keep saying "open" after the deadline has passed.
   separate files pulled in by `import()` only when their route first opens.
 - API answers are cached in memory with their ETags. The API binds tags to
   the minute, so a repeat read inside the same minute costs one conditional
-  request that answers 304; a cached page renders instantly and refreshes
-  behind itself.
+  request that answers 304; two reads of the same path in flight share one
+  request. A cached page renders instantly, revalidates behind itself, and
+  repaints in place when the revalidation brings data that changed.
+- While a bounty page is read, its leaderboard module and data prefetch in
+  the background, so the leaderboard link paints at once.
 - Long lists are not built until asked for: leaderboard rows paginate, the
   rules text renders on first open, and board filtering repaints only the
-  card grid, never the whole page.
+  card grid, never the whole page. Countdowns tick every thirty seconds
+  and turn amber under two hours; the board remembers its search, filter
+  and order between visits.
 
 ## Run it locally
 
